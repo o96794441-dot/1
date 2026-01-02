@@ -6,6 +6,15 @@ import { createToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
     try {
+        // Check if MONGODB_URI is set
+        if (!process.env.MONGODB_URI) {
+            console.error('MONGODB_URI is not defined');
+            return NextResponse.json(
+                { error: 'خطأ في إعدادات الخادم - MONGODB_URI غير معرّف' },
+                { status: 500 }
+            );
+        }
+
         await connectDB();
 
         const { name, email, password } = await request.json();
@@ -77,9 +86,11 @@ export async function POST(request: NextRequest) {
         return response;
     } catch (error) {
         console.error('Registration error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { error: 'حدث خطأ أثناء إنشاء الحساب' },
+            { error: 'حدث خطأ: ' + errorMessage },
             { status: 500 }
         );
     }
 }
+
