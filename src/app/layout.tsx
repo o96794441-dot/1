@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 // ضع Publisher ID الخاص بك من Google AdSense هنا
-const ADSENSE_PUBLISHER_ID = process.env.NEXT_PUBLIC_ADSENSE_ID || "ca-pub-XXXXXXXXXXXXXXXX";
+const ADSENSE_PUBLISHER_ID = process.env.NEXT_PUBLIC_ADSENSE_ID || "ca-pub-4178695051565643";
 
 export default function RootLayout({
   children,
