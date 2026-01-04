@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Tajawal } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -17,9 +16,6 @@ export const metadata: Metadata = {
   keywords: ["أفلام", "مسلسلات", "مشاهدة", "مجاني", "عربي", "OLK Films"],
 };
 
-// ضع Publisher ID الخاص بك من Google AdSense هنا
-const ADSENSE_PUBLISHER_ID = process.env.NEXT_PUBLIC_ADSENSE_ID || "ca-pub-4178695051565643";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,15 +23,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <head>
-        {/* Google AdSense Script */}
-        <Script
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_PUBLISHER_ID}`}
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
-      </head>
       <body className={`${tajawal.variable} font-sans antialiased flex flex-col min-h-screen`} suppressHydrationWarning>
         <Navbar />
         <main className="flex-1 pt-16">
