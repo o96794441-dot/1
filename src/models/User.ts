@@ -5,6 +5,7 @@ export interface IUser extends Document {
     email: string;
     password: string;
     role: 'user' | 'admin';
+    status: 'pending' | 'approved' | 'rejected';
     isBanned: boolean;
     avatar?: string;
     createdAt: Date;
@@ -34,6 +35,11 @@ const UserSchema: Schema = new Schema({
         enum: ['user', 'admin'],
         default: 'user',
     },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending',
+    },
     isBanned: {
         type: Boolean,
         default: false,
@@ -53,3 +59,4 @@ const UserSchema: Schema = new Schema({
 });
 
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
+

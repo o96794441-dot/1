@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
-import { createToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
     try {
@@ -46,44 +45,24 @@ export async function POST(request: NextRequest) {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Create user
-        const user = await User.create({
+        // Create user with pending status (requires admin approval)
+        await User.create({
             name,
             email: email.toLowerCase(),
             password: hashedPassword,
             role: 'user',
+            status: 'pending', // User needs admin approval
             isBanned: false,
         });
 
-        // Create token
-        const token = await createToken({
-            userId: user._id.toString(),
-            email: user.email,
-            role: user.role,
-        });
-
-        // Set cookie
-        const response = NextResponse.json(
+        // Return success - user needs to wait for approval
+        return NextResponse.json(
             {
-                message: 'تم إنشاء الحساب بنجاح',
-                user: {
-                    id: user._id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role,
-                },
+                message: 'تم إرسال طلب التسجيل بنجاح. يرجى انتظار موافقة المشرف.',
+                pending: true,
             },
             { status: 201 }
         );
-
-        response.cookies.set('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 7, // 7 days
-        });
-
-        return response;
     } catch (error) {
         console.error('Registration error:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -93,4 +72,5 @@ export async function POST(request: NextRequest) {
         );
     }
 }
+
 

@@ -42,8 +42,8 @@ export default function RegisterPage() {
                 throw new Error(data.error || 'حدث خطأ');
             }
 
-            router.push('/');
-            router.refresh();
+            // Redirect to pending page - user needs admin approval
+            router.push('/pending');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'حدث خطأ');
         } finally {

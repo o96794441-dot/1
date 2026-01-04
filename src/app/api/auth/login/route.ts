@@ -35,6 +35,21 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Check user status (pending/rejected)
+        if (user.status === 'pending') {
+            return NextResponse.json(
+                { error: 'حسابك قيد المراجعة. يرجى انتظار موافقة المشرف.', pending: true },
+                { status: 403 }
+            );
+        }
+
+        if (user.status === 'rejected') {
+            return NextResponse.json(
+                { error: 'تم رفض طلب تسجيلك.', rejected: true },
+                { status: 403 }
+            );
+        }
+
         // Verify password
         const isValidPassword = await bcrypt.compare(password, user.password);
         if (!isValidPassword) {
@@ -65,6 +80,7 @@ export async function POST(request: NextRequest) {
                     email: user.email,
                     role: user.role,
                     avatar: user.avatar,
+                    status: user.status,
                 },
             },
             { status: 200 }
@@ -86,3 +102,4 @@ export async function POST(request: NextRequest) {
         );
     }
 }
+
