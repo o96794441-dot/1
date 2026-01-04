@@ -2,26 +2,59 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
+import { sanitizeInput, isValidEmail, validatePassword } from '@/lib/sanitize';
 
 export async function POST(request: NextRequest) {
     try {
+        // Rate limiting - prevent registration abuse
+        const ip = request.headers.get('x-forwarded-for') || 'unknown';
+        const rateLimit = checkRateLimit(`register:${ip}`, RATE_LIMITS.register);
+
+        if (!rateLimit.allowed) {
+            return NextResponse.json(
+                { error: 'تم تجاوز عدد التسجيلات المسموحة. حاول مرة أخرى لاحقاً.' },
+                { status: 429 }
+            );
+        }
+
         // Check if MONGODB_URI is set
         if (!process.env.MONGODB_URI) {
             console.error('MONGODB_URI is not defined');
             return NextResponse.json(
-                { error: 'خطأ في إعدادات الخادم - MONGODB_URI غير معرّف' },
+                { error: 'خطأ في إعدادات الخادم' },
                 { status: 500 }
             );
         }
 
         await connectDB();
 
-        const { name, email, password } = await request.json();
+        const body = await request.json();
+        const name = sanitizeInput(body.name || '');
+        const email = sanitizeInput(body.email || '').toLowerCase();
+        const password = body.password || '';
 
         // Validate input
         if (!name || !email || !password) {
             return NextResponse.json(
                 { error: 'الرجاء ملء جميع الحقول' },
+                { status: 400 }
+            );
+        }
+
+        // Validate email format
+        if (!isValidEmail(email)) {
+            return NextResponse.json(
+                { error: 'البريد الإلكتروني غير صالح' },
+                { status: 400 }
+            );
+        }
+
+        // Validate password
+        const passwordCheck = validatePassword(password);
+        if (!passwordCheck.valid) {
+            return NextResponse.json(
+                { error: passwordCheck.message },
                 { status: 400 }
             );
         }

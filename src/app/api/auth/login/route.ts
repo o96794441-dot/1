@@ -3,12 +3,27 @@ import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { createToken } from '@/lib/auth';
+import { checkRateLimit, RATE_LIMITS } from '@/lib/rateLimit';
+import { sanitizeInput } from '@/lib/sanitize';
 
 export async function POST(request: NextRequest) {
     try {
+        // Rate limiting - prevent brute force attacks
+        const ip = request.headers.get('x-forwarded-for') || 'unknown';
+        const rateLimit = checkRateLimit(`login:${ip}`, RATE_LIMITS.login);
+
+        if (!rateLimit.allowed) {
+            return NextResponse.json(
+                { error: 'تم تجاوز عدد المحاولات المسموحة. حاول مرة أخرى بعد 15 دقيقة.' },
+                { status: 429 }
+            );
+        }
+
         await connectDB();
 
-        const { email, password } = await request.json();
+        const body = await request.json();
+        const email = sanitizeInput(body.email || '');
+        const password = body.password || '';
 
         // Validate input
         if (!email || !password) {
