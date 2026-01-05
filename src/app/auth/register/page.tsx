@@ -59,20 +59,10 @@ export default function RegisterPage() {
             </div>
 
             <div className="relative z-10 w-full max-w-md">
-                {/* Logo */}
-                <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-                    <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-800 rounded-xl flex items-center justify-center">
-                        <span className="text-white font-bold text-2xl">O</span>
-                    </div>
-                    <span className="text-3xl font-bold bg-gradient-to-r from-red-500 to-red-600 bg-clip-text text-transparent">
-                        OLK Films
-                    </span>
-                </Link>
-
                 {/* Form */}
                 <div className="glass rounded-2xl p-8">
                     <h1 className="text-2xl font-bold text-white text-center mb-2">إنشاء حساب جديد</h1>
-                    <p className="text-gray-400 text-center mb-8">انضم إلينا واستمتع بآلاف الأفلام مجاناً</p>
+                    <p className="text-gray-400 text-center mb-8">انضم إلينا واستمتع بالمحتوى الحصري</p>
 
                     {error && (
                         <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-6 text-red-400 text-center">
