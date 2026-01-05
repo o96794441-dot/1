@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Tajawal } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import LayoutWrapper from "@/components/LayoutWrapper";
 
 const tajawal = Tajawal({
   subsets: ["arabic", "latin"],
@@ -11,9 +10,8 @@ const tajawal = Tajawal({
 });
 
 export const metadata: Metadata = {
-  title: "OLK Films - شاهد أفضل الأفلام والمسلسلات مجاناً",
-  description: "منصة OLK Films لمشاهدة أحدث الأفلام والمسلسلات العربية والأجنبية مجاناً بجودة عالية",
-  keywords: ["أفلام", "مسلسلات", "مشاهدة", "مجاني", "عربي", "OLK Films"],
+  title: "تسجيل الدخول",
+  description: "سجل دخولك للمتابعة",
 };
 
 export default function RootLayout({
@@ -24,13 +22,10 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body className={`${tajawal.variable} font-sans antialiased flex flex-col min-h-screen`} suppressHydrationWarning>
-        <Navbar />
-        <main className="flex-1 pt-16">
-          {children}
-        </main>
-        <Footer />
+        <LayoutWrapper>{children}</LayoutWrapper>
       </body>
     </html>
   );
 }
+
 
