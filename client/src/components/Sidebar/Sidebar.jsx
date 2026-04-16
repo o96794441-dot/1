@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { useChat } from "../../context/ChatContext";
+import { useChat, requestNotificationPermission } from "../../context/ChatContext";
 import ChatListItem from "./ChatListItem";
 import GroupModal from "../shared/GroupModal";
 import ProfileDrawer from "../shared/ProfileDrawer";
@@ -11,7 +11,7 @@ import toast from "react-hot-toast";
 
 export default function Sidebar({ onChatSelect, activeChatId }) {
   const { user, logout } = useAuth();
-  const { chats, fetchChats, openChat, loadingChats } = useChat();
+  const { chats, fetchChats, openChat, loadingChats, notifPermission, setNotifPermission } = useChat();
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -20,6 +20,13 @@ export default function Sidebar({ onChatSelect, activeChatId }) {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showAddById, setShowAddById] = useState(false);
   const searchTimer = useRef(null);
+
+  const handleEnableNotifs = async () => {
+    const result = await requestNotificationPermission();
+    setNotifPermission(result);
+    if (result === "granted") toast.success("🔔 Notifications enabled!");
+    else if (result === "denied") toast.error("Notifications blocked. Enable in browser settings.");
+  };
 
   useEffect(() => { fetchChats(); }, [fetchChats]);
 
@@ -131,6 +138,32 @@ export default function Sidebar({ onChatSelect, activeChatId }) {
             📋 Copy
           </button>
         </div>
+
+        {/* ── Notification Permission Banner ──────────────────── */}
+        {notifPermission !== "granted" && notifPermission !== "denied" && notifPermission !== "unsupported" && (
+          <div
+            onClick={handleEnableNotifs}
+            style={{
+              padding: "10px 16px",
+              background: "rgba(255,180,0,0.08)",
+              borderBottom: "1px solid rgba(255,180,0,0.15)",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ fontSize: 20 }}>🔔</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#ffb400" }}>Enable Notifications</div>
+              <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                Tap to receive messages like WhatsApp
+              </div>
+            </div>
+            <span style={{ fontSize: 11, color: "#ffb400", fontWeight: 700 }}>Enable →</span>
+          </div>
+        )}
 
         {/* ── Search ──────────────────────────────────────────── */}
         <div className="search-box">

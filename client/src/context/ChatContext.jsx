@@ -6,26 +6,46 @@ import toast from "react-hot-toast";
 
 const ChatContext = createContext();
 
-// ── Browser notification helper ───────────────────────────────
-function requestNotificationPermission() {
-  if ("Notification" in window && Notification.permission === "default") {
-    Notification.requestPermission();
-  }
-}
-
-function showBrowserNotification(title, body, icon) {
-  if ("Notification" in window && Notification.permission === "granted") {
-    try {
-      const n = new Notification(title, {
+// ── Show system notification via Service Worker (works in background & offline) ──
+async function showSystemNotification(title, body, icon) {
+  try {
+    // Use Service Worker showNotification for true system-level notifications
+    if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, {
         body,
-        icon: icon || "/favicon.svg",
-        badge: "/favicon.svg",
+        icon: icon || "/icon-192.png",
+        badge: "/icon-192.png",
         tag: "chatapp-msg",
         renotify: true,
+        vibrate: [200, 100, 200],
+        requireInteraction: false,
+        data: { url: window.location.href },
+      });
+      return;
+    }
+    // Fallback to basic Notification API
+    if ("Notification" in window && Notification.permission === "granted") {
+      const n = new Notification(title, {
+        body,
+        icon: icon || "/icon-192.png",
+        badge: "/icon-192.png",
+        tag: "chatapp-msg",
+        renotify: true,
+        vibrate: [200, 100, 200],
       });
       n.onclick = () => { window.focus(); n.close(); };
-    } catch {}
-  }
+    }
+  } catch {}
+}
+
+// ── Request notification permission with better UX ──
+export async function requestNotificationPermission() {
+  if (!("Notification" in window)) return "unsupported";
+  if (Notification.permission === "granted") return "granted";
+  if (Notification.permission === "denied") return "denied";
+  const result = await Notification.requestPermission();
+  return result;
 }
 
 export const ChatProvider = ({ children }) => {
@@ -37,26 +57,64 @@ export const ChatProvider = ({ children }) => {
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [loadingChats, setLoadingChats] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [notifPermission, setNotifPermission] = useState(
+    "Notification" in window ? Notification.permission : "unsupported"
+  );
   const socketRef = useRef(null);
   const activeChatRef = useRef(activeChat);
-  const chatsRef = useRef(chats);
+  const fetchChatsRef = useRef(null);
 
   useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
-  useEffect(() => { chatsRef.current = chats; }, [chats]);
 
-  // Request notification permission when user logs in
+  // ── Fetch chats (memoized) ───────────────────────────────
+  const fetchChats = useCallback(async () => {
+    setLoadingChats(true);
+    try {
+      const { data } = await api.get("/chats");
+      setChats(data);
+    } catch {
+      toast.error("Failed to load chats");
+    } finally {
+      setLoadingChats(false);
+    }
+  }, []);
+
+  // Keep a ref to fetchChats so socket handler can call it
+  useEffect(() => { fetchChatsRef.current = fetchChats; }, [fetchChats]);
+
+  // ── Re-fetch chats when tab becomes visible again ────────
+  // This ensures new chats appear when user returns from background
   useEffect(() => {
-    if (user) requestNotificationPermission();
-  }, [user]);
+    if (!token) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchChatsRef.current?.();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [token]);
 
-  // Connect socket when logged in
+  // ── Connect socket ───────────────────────────────────────
   useEffect(() => {
     if (!token) return;
     const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
-    socketRef.current = io(SOCKET_URL, { auth: { token } });
+    socketRef.current = io(SOCKET_URL, {
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+    });
 
-    socketRef.current.on("connect", () => console.log("✅ Socket connected"));
-    socketRef.current.on("connect_error", (err) => console.error("Socket error:", err.message));
+    socketRef.current.on("connect", () => {
+      console.log("✅ Socket connected");
+      // Re-fetch chats on reconnect — catches any missed messages
+      fetchChatsRef.current?.();
+    });
+
+    socketRef.current.on("connect_error", (err) =>
+      console.error("Socket error:", err.message)
+    );
 
     socketRef.current.on("user-online", ({ userId }) => {
       setOnlineUsers((prev) => new Set([...prev, userId]));
@@ -73,47 +131,43 @@ export const ChatProvider = ({ children }) => {
     });
 
     socketRef.current.on("stop-typing", ({ chatId }) => {
-      setTypingUsers((prev) => { const next = { ...prev }; delete next[chatId]; return next; });
+      setTypingUsers((prev) => {
+        const next = { ...prev }; delete next[chatId]; return next;
+      });
     });
 
-    socketRef.current.on("message-received", (newMessage) => {
+    socketRef.current.on("message-received", async (newMessage) => {
       const chatId = newMessage.chat._id || newMessage.chat;
       const isActiveChat = activeChatRef.current?._id === chatId;
 
-      // Add message to view if this chat is open
       if (isActiveChat) {
         setMessages((prev) => [...prev, newMessage]);
         api.put(`/messages/read/${chatId}`).catch(() => {});
         socketRef.current.emit("message-read", { chatId, userId: user._id });
       } else {
-        // 🔔 Show browser notification + toast for background messages
+        // 🔔 Real system notification (appears above everything like WhatsApp)
         const senderName = newMessage.sender?.name || "Someone";
         const msgPreview = newMessage.content
-          ? newMessage.content.slice(0, 60)
+          ? newMessage.content.slice(0, 80)
           : newMessage.fileUrl ? "📎 Sent a file" : "New message";
 
-        showBrowserNotification(senderName, msgPreview, newMessage.sender?.avatar);
-        toast(`💬 ${senderName}: ${msgPreview}`, {
-          icon: "🔔",
-          duration: 4000,
-          style: { cursor: "pointer" },
-        });
+        await showSystemNotification(senderName, msgPreview, newMessage.sender?.avatar);
+        toast(`💬 ${senderName}: ${msgPreview}`, { icon: "🔔", duration: 4000 });
       }
 
       // Update chat list — move to top with latest message
       setChats((prev) => {
-        const existingIdx = prev.findIndex((c) => c._id === chatId);
-        if (existingIdx !== -1) {
-          // Existing chat — update and sort to top
-          const updated = prev.map((c) =>
-            c._id === chatId ? { ...c, latestMessage: newMessage, updatedAt: newMessage.createdAt } : c
-          );
-          return updated.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+        const exists = prev.some((c) => c._id === chatId);
+        if (exists) {
+          return prev
+            .map((c) => c._id === chatId
+              ? { ...c, latestMessage: newMessage, updatedAt: newMessage.createdAt }
+              : c
+            )
+            .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
         } else {
-          // 🆕 NEW chat not in list — fetch it and add to top
-          api.get(`/chats`).then(({ data }) => {
-            setChats(data);
-          }).catch(() => {});
+          // 🆕 New chat not in list — re-fetch entire chat list
+          fetchChatsRef.current?.();
           return prev;
         }
       });
@@ -132,18 +186,6 @@ export const ChatProvider = ({ children }) => {
 
     return () => { socketRef.current?.disconnect(); };
   }, [token]);
-
-  const fetchChats = useCallback(async () => {
-    setLoadingChats(true);
-    try {
-      const { data } = await api.get("/chats");
-      setChats(data);
-    } catch {
-      toast.error("Failed to load chats");
-    } finally {
-      setLoadingChats(false);
-    }
-  }, []);
 
   const openChat = useCallback(async (chat) => {
     if (activeChatRef.current) {
@@ -171,8 +213,10 @@ export const ChatProvider = ({ children }) => {
       });
       setMessages((prev) => [...prev, msg]);
       setChats((prev) =>
-        prev.map((c) => c._id === activeChat._id ? { ...c, latestMessage: msg, updatedAt: msg.createdAt } : c)
-          .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+        prev.map((c) => c._id === activeChat._id
+          ? { ...c, latestMessage: msg, updatedAt: msg.createdAt }
+          : c
+        ).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
       );
       socketRef.current?.emit("new-message", msg);
       return msg;
@@ -193,7 +237,9 @@ export const ChatProvider = ({ children }) => {
     <ChatContext.Provider value={{
       chats, setChats, activeChat, setActiveChat, messages, setMessages,
       typingUsers, onlineUsers, loadingChats, loadingMessages,
-      fetchChats, openChat, sendMessage, emitTyping, emitStopTyping, socket: socketRef.current
+      fetchChats, openChat, sendMessage, emitTyping, emitStopTyping,
+      socket: socketRef.current, notifPermission, setNotifPermission,
+      requestNotificationPermission,
     }}>
       {children}
     </ChatContext.Provider>
