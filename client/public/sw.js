@@ -1,7 +1,8 @@
-const CACHE_NAME = "chatapp-v1";
-const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
+// ── ChatApp Service Worker ────────────────────────────────────
+const CACHE_NAME = "chatapp-v3";
+const STATIC_ASSETS = ["/", "/index.html"];
 
-// Install — cache static assets
+// ── Install ───────────────────────────────────────────────────
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
@@ -9,7 +10,7 @@ self.addEventListener("install", (e) => {
   self.skipWaiting();
 });
 
-// Activate — clean old caches
+// ── Activate — clean old caches ───────────────────────────────
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
@@ -19,55 +20,51 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-// Fetch — network first, fallback to cache
+// ── Fetch — serve from cache, fallback to network ────────────
 self.addEventListener("fetch", (e) => {
-  if (!e.request.url.startsWith("http")) return;
-  // Skip API and socket requests — always go to network
-  if (e.request.url.includes("/api/") || e.request.url.includes("socket.io")) return;
-
+  if (e.request.method !== "GET") return;
   e.respondWith(
-    fetch(e.request)
-      .then((res) => {
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
-        return res;
-      })
-      .catch(() => caches.match(e.request))
+    fetch(e.request).catch(() => caches.match(e.request))
   );
 });
 
-// 🔔 Push Notification handler — fires even when app is closed
+// ── 🔔 Push — show system notification ───────────────────────
 self.addEventListener("push", (e) => {
-  let data = { title: "ChatApp", body: "You have a new message 💬" };
-  try {
-    data = e.data?.json() || data;
-  } catch {}
+  let data = {};
+  try { data = e.data?.json() || {}; } catch { data = { title: "ChatApp", body: e.data?.text() }; }
 
-  e.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
-      tag: "chatapp-message",
-      renotify: true,
-      vibrate: [200, 100, 200],
-      data: { url: data.url || "/" },
-    })
-  );
+  const title = data.title || "ChatApp";
+  const options = {
+    body: data.body || "New message",
+    icon: data.icon || "/icon-192.png",
+    badge: "/icon-192.png",
+    tag: data.tag || "chatapp-msg",
+    renotify: true,
+    vibrate: [200, 100, 200],
+    requireInteraction: false,
+    data: data.data || {},
+    actions: [
+      { action: "open", title: "Open" },
+      { action: "dismiss", title: "Dismiss" },
+    ],
+  };
+
+  e.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Notification click — focus or open the app
+// ── Notification click ────────────────────────────────────────
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
-  const url = e.notification.data?.url || "/";
+
+  if (e.action === "dismiss") return;
+
   e.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && "focus" in client) {
-          return client.focus();
-        }
-      }
-      return clients.openWindow(url);
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      // Focus existing window if open
+      const existing = windowClients.find((c) => c.url.includes(self.location.origin));
+      if (existing) return existing.focus();
+      // Open new window
+      return clients.openWindow("/");
     })
   );
 });

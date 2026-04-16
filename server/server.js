@@ -39,7 +39,8 @@ app.use("/api/auth",     require("./routes/auth"));
 app.use("/api/users",    require("./routes/user"));
 app.use("/api/chats",    require("./routes/chat"));
 app.use("/api/messages", require("./routes/message"));
-app.use("/api/admin",    require("./routes/admin"));   // 🛡️ Admin dashboard API
+app.use("/api/admin",    require("./routes/admin"));
+app.use("/api/push",     require("./routes/push"));   // 🔔 Web Push
 
 // Health check
 app.get("/", (req, res) => res.json({ status: "ChatApp API running 🚀", privacy: "IP/Location never stored" }));

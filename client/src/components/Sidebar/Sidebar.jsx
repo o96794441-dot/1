@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useChat, requestNotificationPermission } from "../../context/ChatContext";
+import { subscribeToPushNotifications } from "../../main";
 import ChatListItem from "./ChatListItem";
 import GroupModal from "../shared/GroupModal";
 import ProfileDrawer from "../shared/ProfileDrawer";
@@ -10,7 +11,7 @@ import api from "../../services/api";
 import toast from "react-hot-toast";
 
 export default function Sidebar({ onChatSelect, activeChatId }) {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const { chats, fetchChats, openChat, loadingChats, notifPermission, setNotifPermission } = useChat();
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -24,9 +25,21 @@ export default function Sidebar({ onChatSelect, activeChatId }) {
   const handleEnableNotifs = async () => {
     const result = await requestNotificationPermission();
     setNotifPermission(result);
-    if (result === "granted") toast.success("🔔 Notifications enabled!");
-    else if (result === "denied") toast.error("Notifications blocked. Enable in browser settings.");
+    if (result === "granted") {
+      toast.success("🔔 Notifications enabled!");
+      // Subscribe to Web Push so notifications work even when browser is closed
+      await subscribeToPushNotifications(token);
+    } else if (result === "denied") {
+      toast.error("Notifications blocked. Enable in browser settings.");
+    }
   };
+
+  // Auto-subscribe to push if permission already granted
+  useEffect(() => {
+    if (notifPermission === "granted" && token) {
+      subscribeToPushNotifications(token);
+    }
+  }, [notifPermission, token]);
 
   useEffect(() => { fetchChats(); }, [fetchChats]);
 

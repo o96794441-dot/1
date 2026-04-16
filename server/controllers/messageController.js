@@ -1,6 +1,7 @@
 const Message = require("../models/Message");
 const Chat = require("../models/Chat");
 const cloudinary = require("../config/cloudinary");
+const { sendPushToUsers } = require("./pushController");
 
 // @route POST /api/messages
 const sendMessage = async (req, res) => {
@@ -22,7 +23,31 @@ const sendMessage = async (req, res) => {
 
   const fullMsg = await Message.findById(message._id)
     .populate("sender", "name avatar email")
-    .populate("chat");
+    .populate({ path: "chat", populate: { path: "users", select: "_id" } });
+
+  // 🔔 Send Web Push to all other chat members (works even when browser is closed)
+  try {
+    const otherUserIds = fullMsg.chat.users
+      .map((u) => u._id)
+      .filter((id) => id.toString() !== req.user._id.toString());
+
+    if (otherUserIds.length > 0) {
+      const preview = fullMsg.content
+        ? fullMsg.content.slice(0, 80)
+        : fullMsg.fileUrl ? "📎 Sent a file" : "New message";
+
+      await sendPushToUsers(otherUserIds, {
+        title: req.user.name,
+        body: preview,
+        icon: req.user.avatar || "/icon-192.png",
+        badge: "/icon-192.png",
+        tag: `chat-${chatId}`,
+        data: { chatId },
+      });
+    }
+  } catch (pushErr) {
+    console.error("Push notification error:", pushErr.message);
+  }
 
   res.status(201).json(fullMsg);
 };
