@@ -84,6 +84,11 @@ export const ChatProvider = ({ children }) => {
       fetchChatsRef.current?.();
     });
 
+    // ✅ Receive full list of online users on connect
+    socketRef.current.on("online-users-list", (userIds) => {
+      setOnlineUsers(new Set(userIds));
+    });
+
     socketRef.current.on("connect_error", (err) =>
       console.error("Socket error:", err.message)
     );

@@ -1,6 +1,9 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
+// ── In-memory set of online user IDs ──
+const onlineUsers = new Set();
+
 const setupSocket = (io) => {
   // Auth middleware for socket
   io.use(async (socket, next) => {
@@ -19,8 +22,16 @@ const setupSocket = (io) => {
     const userId = socket.user._id.toString();
     console.log(`🔌 User connected: ${socket.user.name} (${userId})`);
 
-    // Update user online status
+    // Add to online set
+    onlineUsers.add(userId);
+
+    // Update user online status in DB
     await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: new Date() });
+
+    // ✅ Send the FULL list of online users to the newly connected user
+    socket.emit("online-users-list", Array.from(onlineUsers));
+
+    // ✅ Tell everyone else this user just came online
     socket.broadcast.emit("user-online", { userId });
 
     // Join personal room
@@ -59,6 +70,7 @@ const setupSocket = (io) => {
 
     // Disconnect
     socket.on("disconnect", async () => {
+      onlineUsers.delete(userId);
       const now = new Date();
       await User.findByIdAndUpdate(userId, { isOnline: false, lastSeen: now });
       socket.broadcast.emit("user-offline", { userId, lastSeen: now });
