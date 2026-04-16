@@ -96,6 +96,13 @@ export default function Sidebar({ onChatSelect, activeChatId }) {
                 style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
               />
             </button>
+            {/* 🔄 Refresh */}
+            <button
+              className="icon-btn"
+              title="Refresh chats"
+              onClick={() => { fetchChats(); toast("🔄 Refreshed!", { duration: 1500 }); }}
+              style={{ fontSize: 16 }}
+            >🔄</button>
             {/* 🚪 Logout */}
             <button className="icon-btn" title="Logout" onClick={logout}>🚪</button>
           </div>

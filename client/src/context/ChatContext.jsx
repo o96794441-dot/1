@@ -6,40 +6,7 @@ import toast from "react-hot-toast";
 
 const ChatContext = createContext();
 
-// ── Show system notification via Service Worker (works in background & offline) ──
-async function showSystemNotification(title, body, icon) {
-  try {
-    // Use Service Worker showNotification for true system-level notifications
-    if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-      const reg = await navigator.serviceWorker.ready;
-      await reg.showNotification(title, {
-        body,
-        icon: icon || "/icon-192.png",
-        badge: "/icon-192.png",
-        tag: "chatapp-msg",
-        renotify: true,
-        vibrate: [200, 100, 200],
-        requireInteraction: false,
-        data: { url: window.location.href },
-      });
-      return;
-    }
-    // Fallback to basic Notification API
-    if ("Notification" in window && Notification.permission === "granted") {
-      const n = new Notification(title, {
-        body,
-        icon: icon || "/icon-192.png",
-        badge: "/icon-192.png",
-        tag: "chatapp-msg",
-        renotify: true,
-        vibrate: [200, 100, 200],
-      });
-      n.onclick = () => { window.focus(); n.close(); };
-    }
-  } catch {}
-}
-
-// ── Request notification permission with better UX ──
+// ── Request notification permission ──────────────────────────
 export async function requestNotificationPermission() {
   if (!("Notification" in window)) return "unsupported";
   if (Notification.permission === "granted") return "granted";
@@ -152,13 +119,11 @@ export const ChatProvider = ({ children }) => {
       } else {
         // 🔴 Increment unread badge count for this chat
         setUnreadCounts((prev) => ({ ...prev, [chatId]: (prev[chatId] || 0) + 1 }));
-        // 🔔 Real system notification (appears above everything like WhatsApp)
+        // 💬 In-app toast notification
         const senderName = newMessage.sender?.name || "Someone";
         const msgPreview = newMessage.content
           ? newMessage.content.slice(0, 80)
           : newMessage.fileUrl ? "📎 Sent a file" : "New message";
-
-        await showSystemNotification(senderName, msgPreview, newMessage.sender?.avatar);
         toast(`💬 ${senderName}: ${msgPreview}`, { icon: "🔔", duration: 4000 });
       }
 
