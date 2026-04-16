@@ -132,11 +132,36 @@ body {
     z-index: 5;
   }
 
-  /* Show back button on mobile */
+  /* ← Back button — big, bold, easy to tap on mobile */
   .mobile-back-btn {
     display: flex !important;
-    font-size: 20px;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 230, 118, 0.12);
     color: var(--accent) !important;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-right: 6px;
+    transition: background 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+
+  .mobile-back-btn:active {
+    background: rgba(0, 230, 118, 0.25);
+    transform: scale(0.92);
+  }
+
+  /* iOS safe area padding for notch */
+  .chat-header {
+    padding-top: env(safe-area-inset-top, 0px);
+    min-height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
   }
 
   /* Wider bubbles on mobile */

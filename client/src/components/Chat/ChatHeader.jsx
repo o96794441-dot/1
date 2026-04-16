@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
 import { getChatName, getChatAvatar, getOtherUser } from "../Sidebar/ChatListItem";
@@ -5,6 +6,21 @@ import { getChatName, getChatAvatar, getOtherUser } from "../Sidebar/ChatListIte
 export default function ChatHeader({ onInfoClick, onBack }) {
   const { user } = useAuth();
   const { activeChat, onlineUsers, typingUsers } = useChat();
+
+  // ── Handle Android hardware back button ─────────────────
+  useEffect(() => {
+    if (!onBack || !activeChat) return;
+
+    // Push a fake state so hardware back goes here first
+    window.history.pushState({ chatOpen: true }, "");
+
+    const handlePopState = (e) => {
+      onBack(); // Go back to sidebar instead of browser history
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [activeChat, onBack]);
 
   if (!activeChat) return null;
 
@@ -24,23 +40,25 @@ export default function ChatHeader({ onInfoClick, onBack }) {
 
   return (
     <div className="chat-header">
-      {/* ← Back button — only visible on mobile */}
-      {onBack && (
-        <button
-          className="icon-btn mobile-back-btn"
-          onClick={onBack}
-          title="Back"
-          style={{ marginRight: 4 }}
-        >
-          ←
-        </button>
-      )}
+      {/* ← Back button — visible on mobile only via CSS */}
+      <button
+        className="mobile-back-btn"
+        onClick={onBack}
+        title="Back"
+        aria-label="Back to chats"
+      >
+        ←
+      </button>
 
       <div className="avatar-wrap">
         {activeChat.isGroupChat ? (
           <div className="avatar-group">👥</div>
         ) : (
-          <img className="avatar" src={avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`} alt={name} />
+          <img
+            className="avatar"
+            src={avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`}
+            alt={name}
+          />
         )}
         {isOnline && <div className="online-dot" />}
       </div>
@@ -52,7 +70,7 @@ export default function ChatHeader({ onInfoClick, onBack }) {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 4 }}>
+      <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
         <button className="icon-btn" title="Info" onClick={onInfoClick}>ℹ️</button>
       </div>
     </div>
