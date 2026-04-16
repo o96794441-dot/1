@@ -604,6 +604,31 @@ body {
 
 .chat-header-status.online { color: var(--accent); }
 
+/* ── Back / Exit button — always visible in chat header ── */
+.back-btn-visible {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 230, 118, 0.10);
+  color: var(--accent);
+  font-size: 28px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  flex-shrink: 0;
+  margin-right: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.back-btn-visible:hover { background: rgba(0, 230, 118, 0.2); }
+.back-btn-visible:active { transform: scale(0.88); background: rgba(0,230,118,0.28); }
+
 /* ─── MESSAGES AREA ─────────────────────────────────────────── */
 .messages-area {
   flex: 1;

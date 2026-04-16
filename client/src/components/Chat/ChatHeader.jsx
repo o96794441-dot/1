@@ -10,14 +10,8 @@ export default function ChatHeader({ onInfoClick, onBack }) {
   // ── Handle Android hardware back button ─────────────────
   useEffect(() => {
     if (!onBack || !activeChat) return;
-
-    // Push a fake state so hardware back goes here first
     window.history.pushState({ chatOpen: true }, "");
-
-    const handlePopState = (e) => {
-      onBack(); // Go back to sidebar instead of browser history
-    };
-
+    const handlePopState = () => { onBack(); };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, [activeChat, onBack]);
@@ -39,18 +33,20 @@ export default function ChatHeader({ onInfoClick, onBack }) {
   };
 
   return (
-    <div className="chat-header">
-      {/* ← Back button — visible on mobile only via CSS */}
+    <div className="chat-header" style={{ background: "var(--bg-secondary)", zIndex: 20 }}>
+
+      {/* ← EXIT button — always visible, prominent */}
       <button
-        className="mobile-back-btn"
+        className="back-btn-visible"
         onClick={onBack}
-        title="Back"
+        title="Back to chats"
         aria-label="Back to chats"
       >
-        ←
+        ‹
       </button>
 
-      <div className="avatar-wrap">
+      {/* Avatar */}
+      <div className="avatar-wrap" style={{ flexShrink: 0 }}>
         {activeChat.isGroupChat ? (
           <div className="avatar-group">👥</div>
         ) : (
@@ -63,16 +59,16 @@ export default function ChatHeader({ onInfoClick, onBack }) {
         {isOnline && <div className="online-dot" />}
       </div>
 
-      <div className="chat-header-info">
-        <div className="chat-header-name">{name}</div>
+      {/* Name + Status */}
+      <div className="chat-header-info" style={{ flex: 1, minWidth: 0 }}>
+        <div className="chat-header-name" style={{ fontSize: 16, fontWeight: 700 }}>{name}</div>
         <div className={`chat-header-status ${isOnline || isTyping ? "online" : ""}`}>
           {statusText()}
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
-        <button className="icon-btn" title="Info" onClick={onInfoClick}>ℹ️</button>
-      </div>
+      {/* Info button */}
+      <button className="icon-btn" title="Info" onClick={onInfoClick}>ℹ️</button>
     </div>
   );
 }
