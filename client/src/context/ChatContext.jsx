@@ -57,6 +57,7 @@ export const ChatProvider = ({ children }) => {
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [loadingChats, setLoadingChats] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState({});
   const [notifPermission, setNotifPermission] = useState(
     "Notification" in window ? Notification.permission : "unsupported"
   );
@@ -145,6 +146,8 @@ export const ChatProvider = ({ children }) => {
         api.put(`/messages/read/${chatId}`).catch(() => {});
         socketRef.current.emit("message-read", { chatId, userId: user._id });
       } else {
+        // 🔴 Increment unread badge count for this chat
+        setUnreadCounts((prev) => ({ ...prev, [chatId]: (prev[chatId] || 0) + 1 }));
         // 🔔 Real system notification (appears above everything like WhatsApp)
         const senderName = newMessage.sender?.name || "Someone";
         const msgPreview = newMessage.content
@@ -188,6 +191,8 @@ export const ChatProvider = ({ children }) => {
   }, [token]);
 
   const openChat = useCallback(async (chat) => {
+    // Clear unread count when opening a chat
+    setUnreadCounts((prev) => { const next={...prev}; delete next[chat._id]; return next; });
     if (activeChatRef.current) {
       socketRef.current?.emit("leave-chat", activeChatRef.current._id);
     }
@@ -239,7 +244,7 @@ export const ChatProvider = ({ children }) => {
       typingUsers, onlineUsers, loadingChats, loadingMessages,
       fetchChats, openChat, sendMessage, emitTyping, emitStopTyping,
       socket: socketRef.current, notifPermission, setNotifPermission,
-      requestNotificationPermission,
+      requestNotificationPermission, unreadCounts,
     }}>
       {children}
     </ChatContext.Provider>

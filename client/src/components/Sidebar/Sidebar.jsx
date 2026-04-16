@@ -139,32 +139,6 @@ export default function Sidebar({ onChatSelect, activeChatId }) {
           </button>
         </div>
 
-        {/* ── Notification Permission Banner ──────────────────── */}
-        {notifPermission !== "granted" && notifPermission !== "denied" && notifPermission !== "unsupported" && (
-          <div
-            onClick={handleEnableNotifs}
-            style={{
-              padding: "10px 16px",
-              background: "rgba(255,180,0,0.08)",
-              borderBottom: "1px solid rgba(255,180,0,0.15)",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ fontSize: 20 }}>🔔</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#ffb400" }}>Enable Notifications</div>
-              <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-                Tap to receive messages like WhatsApp
-              </div>
-            </div>
-            <span style={{ fontSize: 11, color: "#ffb400", fontWeight: 700 }}>Enable →</span>
-          </div>
-        )}
-
         {/* ── Search ──────────────────────────────────────────── */}
         <div className="search-box">
           <div className="search-input-wrap">

@@ -36,7 +36,7 @@ export function formatDateSeparator(dateStr) {
 
 export default function ChatListItem({ chat, isActive, onClick }) {
   const { user } = useAuth();
-  const { onlineUsers, typingUsers } = useChat();
+  const { onlineUsers, typingUsers, unreadCounts } = useChat();
 
   const name = getChatName(chat, user._id);
   const avatar = getChatAvatar(chat, user._id);
@@ -44,6 +44,7 @@ export default function ChatListItem({ chat, isActive, onClick }) {
   const isOnline = !chat.isGroupChat && otherUser && onlineUsers.has(otherUser._id);
   const isTyping = typingUsers[chat._id];
   const latest = chat.latestMessage;
+  const unread = isActive ? 0 : (unreadCounts?.[chat._id] || 0);
 
   const previewText = () => {
     if (isTyping) return "typing...";
@@ -57,7 +58,7 @@ export default function ChatListItem({ chat, isActive, onClick }) {
 
   return (
     <div
-      className={`chat-item ${isActive ? "active" : ""}`}
+      className={`chat-item ${isActive ? "active" : ""} ${unread > 0 ? "has-unread" : ""}`}
       onClick={onClick}
       id={`chat-item-${chat._id}`}
     >
@@ -72,8 +73,8 @@ export default function ChatListItem({ chat, isActive, onClick }) {
 
       <div className="chat-item-body">
         <div className="chat-item-top">
-          <span className="chat-item-name">{name}</span>
-          <span className="chat-item-time">{time}</span>
+          <span className={`chat-item-name ${unread > 0 ? "unread-name" : ""}`}>{name}</span>
+          <span className={`chat-item-time ${unread > 0 ? "unread-time" : ""}`}>{time}</span>
         </div>
         <div className="chat-item-bottom">
           <span
@@ -82,6 +83,13 @@ export default function ChatListItem({ chat, isActive, onClick }) {
           >
             {previewText()}
           </span>
+
+          {/* 🔴 Unread badge — green circle with count like WhatsApp */}
+          {unread > 0 && (
+            <span className="unread-badge" aria-label={`${unread} unread messages`}>
+              {unread > 99 ? "99+" : unread}
+            </span>
+          )}
         </div>
       </div>
     </div>
