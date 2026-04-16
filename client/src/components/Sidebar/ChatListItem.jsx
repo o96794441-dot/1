@@ -68,7 +68,10 @@ export default function ChatListItem({ chat, isActive, onClick }) {
         ) : (
           <img className="avatar" src={avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`} alt={name} />
         )}
-        {isOnline && <div className="online-dot" />}
+        {/* 🟢 Online / ⚫ Offline dot for direct chats */}
+        {!chat.isGroupChat && (
+          <div className={isOnline ? "online-dot" : "offline-dot"} />
+        )}
       </div>
 
       <div className="chat-item-body">

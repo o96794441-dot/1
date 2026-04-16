@@ -29,6 +29,17 @@ export default function ChatHeader({ onInfoClick, onBack }) {
     if (isTyping) return "typing...";
     if (activeChat.isGroupChat) return `${memberCount} members`;
     if (isOnline) return "online";
+    // Show last seen time for offline users
+    if (otherUser?.lastSeen) {
+      const d = new Date(otherUser.lastSeen);
+      const now = new Date();
+      const diffMin = Math.floor((now - d) / 60000);
+      if (diffMin < 1) return "last seen just now";
+      if (diffMin < 60) return `last seen ${diffMin}m ago`;
+      const diffH = Math.floor(diffMin / 60);
+      if (diffH < 24) return `last seen ${diffH}h ago`;
+      return `last seen ${d.toLocaleDateString()}`;
+    }
     return "offline";
   };
 
@@ -56,7 +67,9 @@ export default function ChatHeader({ onInfoClick, onBack }) {
             alt={name}
           />
         )}
-        {isOnline && <div className="online-dot" />}
+        {!activeChat.isGroupChat && (
+          <div className={isOnline ? "online-dot" : "offline-dot"} />
+        )}
       </div>
 
       {/* Name + Status */}

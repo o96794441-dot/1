@@ -456,6 +456,15 @@ body {
   border: 2px solid var(--bg-secondary);
 }
 
+.offline-dot {
+  position: absolute;
+  bottom: 1px; right: 1px;
+  width: 12px; height: 12px;
+  background: #555;
+  border-radius: 50%;
+  border: 2px solid var(--bg-secondary);
+}
+
 .chat-item-body { flex: 1; min-width: 0; }
 
 .chat-item-top {
