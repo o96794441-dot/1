@@ -2,7 +2,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
 import { getChatName, getChatAvatar, getOtherUser } from "../Sidebar/ChatListItem";
 
-export default function ChatHeader({ onInfoClick }) {
+export default function ChatHeader({ onInfoClick, onBack }) {
   const { user } = useAuth();
   const { activeChat, onlineUsers, typingUsers } = useChat();
 
@@ -24,6 +24,18 @@ export default function ChatHeader({ onInfoClick }) {
 
   return (
     <div className="chat-header">
+      {/* ← Back button — only visible on mobile */}
+      {onBack && (
+        <button
+          className="icon-btn mobile-back-btn"
+          onClick={onBack}
+          title="Back"
+          style={{ marginRight: 4 }}
+        >
+          ←
+        </button>
+      )}
+
       <div className="avatar-wrap">
         {activeChat.isGroupChat ? (
           <div className="avatar-group">👥</div>

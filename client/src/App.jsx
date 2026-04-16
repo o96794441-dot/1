@@ -10,7 +10,8 @@ import "./index.css";
 export default function App() {
   const { user, loading } = useAuth();
   const [activeChatId, setActiveChatId] = useState(null);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(true);
+  // Mobile: true = show sidebar, false = show chat
+  const [showSidebar, setShowSidebar] = useState(true);
 
   if (loading) {
     return (
@@ -27,7 +28,11 @@ export default function App() {
 
   const handleChatSelect = (chat) => {
     setActiveChatId(chat._id);
-    setMobileSidebarOpen(false);
+    setShowSidebar(false); // ← on mobile: hide sidebar, show chat
+  };
+
+  const handleBack = () => {
+    setShowSidebar(true); // ← on mobile: go back to sidebar
   };
 
   return (
@@ -46,16 +51,22 @@ export default function App() {
         }}
       />
 
-      {/* 🎯 Onboarding — shown ONCE after first Google login */}
+      {/* Onboarding — shown ONCE after first Google login */}
       {user && !user.onboardingDone && <OnboardingModal />}
 
       <div className="app-layout">
-        <Sidebar
-          onChatSelect={handleChatSelect}
-          activeChatId={activeChatId}
-          className={mobileSidebarOpen ? "" : "hidden"}
-        />
-        <ChatWindow onBack={() => setMobileSidebarOpen(true)} />
+        {/* Sidebar — hidden on mobile when a chat is open */}
+        <div className={`sidebar-wrapper ${!showSidebar ? "mobile-hidden" : ""}`}>
+          <Sidebar
+            onChatSelect={handleChatSelect}
+            activeChatId={activeChatId}
+          />
+        </div>
+
+        {/* Chat Window — hidden on mobile when sidebar is shown */}
+        <div className={`chat-wrapper ${showSidebar ? "mobile-hidden" : ""}`}>
+          <ChatWindow onBack={handleBack} />
+        </div>
       </div>
     </>
   );

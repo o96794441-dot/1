@@ -6,6 +6,28 @@ import toast from "react-hot-toast";
 
 const ChatContext = createContext();
 
+// ── Browser notification helper ───────────────────────────────
+function requestNotificationPermission() {
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
+function showBrowserNotification(title, body, icon) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      const n = new Notification(title, {
+        body,
+        icon: icon || "/favicon.svg",
+        badge: "/favicon.svg",
+        tag: "chatapp-msg",
+        renotify: true,
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+    } catch {}
+  }
+}
+
 export const ChatProvider = ({ children }) => {
   const { user, token } = useAuth();
   const [chats, setChats] = useState([]);
@@ -17,8 +39,15 @@ export const ChatProvider = ({ children }) => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const socketRef = useRef(null);
   const activeChatRef = useRef(activeChat);
+  const chatsRef = useRef(chats);
 
   useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
+  useEffect(() => { chatsRef.current = chats; }, [chats]);
+
+  // Request notification permission when user logs in
+  useEffect(() => {
+    if (user) requestNotificationPermission();
+  }, [user]);
 
   // Connect socket when logged in
   useEffect(() => {
@@ -33,11 +62,9 @@ export const ChatProvider = ({ children }) => {
       setOnlineUsers((prev) => new Set([...prev, userId]));
     });
 
-    socketRef.current.on("user-offline", ({ userId, lastSeen }) => {
+    socketRef.current.on("user-offline", ({ userId }) => {
       setOnlineUsers((prev) => {
-        const next = new Set(prev);
-        next.delete(userId);
-        return next;
+        const next = new Set(prev); next.delete(userId); return next;
       });
     });
 
@@ -46,28 +73,50 @@ export const ChatProvider = ({ children }) => {
     });
 
     socketRef.current.on("stop-typing", ({ chatId }) => {
-      setTypingUsers((prev) => {
-        const next = { ...prev };
-        delete next[chatId];
-        return next;
-      });
+      setTypingUsers((prev) => { const next = { ...prev }; delete next[chatId]; return next; });
     });
 
     socketRef.current.on("message-received", (newMessage) => {
       const chatId = newMessage.chat._id || newMessage.chat;
-      if (activeChatRef.current && activeChatRef.current._id === chatId) {
+      const isActiveChat = activeChatRef.current?._id === chatId;
+
+      // Add message to view if this chat is open
+      if (isActiveChat) {
         setMessages((prev) => [...prev, newMessage]);
-        // Mark as read
         api.put(`/messages/read/${chatId}`).catch(() => {});
         socketRef.current.emit("message-read", { chatId, userId: user._id });
       } else {
-        toast(`💬 New message from ${newMessage.sender.name}`, { icon: "🔔" });
+        // 🔔 Show browser notification + toast for background messages
+        const senderName = newMessage.sender?.name || "Someone";
+        const msgPreview = newMessage.content
+          ? newMessage.content.slice(0, 60)
+          : newMessage.fileUrl ? "📎 Sent a file" : "New message";
+
+        showBrowserNotification(senderName, msgPreview, newMessage.sender?.avatar);
+        toast(`💬 ${senderName}: ${msgPreview}`, {
+          icon: "🔔",
+          duration: 4000,
+          style: { cursor: "pointer" },
+        });
       }
-      // Update chat list latest message
-      setChats((prev) =>
-        prev.map((c) => c._id === chatId ? { ...c, latestMessage: newMessage } : c)
-          .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-      );
+
+      // Update chat list — move to top with latest message
+      setChats((prev) => {
+        const existingIdx = prev.findIndex((c) => c._id === chatId);
+        if (existingIdx !== -1) {
+          // Existing chat — update and sort to top
+          const updated = prev.map((c) =>
+            c._id === chatId ? { ...c, latestMessage: newMessage, updatedAt: newMessage.createdAt } : c
+          );
+          return updated.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+        } else {
+          // 🆕 NEW chat not in list — fetch it and add to top
+          api.get(`/chats`).then(({ data }) => {
+            setChats(data);
+          }).catch(() => {});
+          return prev;
+        }
+      });
     });
 
     socketRef.current.on("message-read", ({ chatId, readerId }) => {
@@ -81,9 +130,7 @@ export const ChatProvider = ({ children }) => {
       }
     });
 
-    return () => {
-      socketRef.current?.disconnect();
-    };
+    return () => { socketRef.current?.disconnect(); };
   }, [token]);
 
   const fetchChats = useCallback(async () => {
@@ -91,7 +138,7 @@ export const ChatProvider = ({ children }) => {
     try {
       const { data } = await api.get("/chats");
       setChats(data);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load chats");
     } finally {
       setLoadingChats(false);

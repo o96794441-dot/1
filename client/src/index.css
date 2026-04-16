@@ -66,6 +66,96 @@ body {
   overflow: hidden;
 }
 
+.sidebar-wrapper {
+  flex-shrink: 0;
+  width: var(--sidebar-width);
+  display: flex;
+  height: 100vh;
+}
+
+.chat-wrapper {
+  flex: 1;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Mobile back button — hidden on desktop */
+.mobile-back-btn {
+  display: none !important;
+}
+
+/* ─── MOBILE LAYOUT (≤ 768px) ───────────────────────────────── */
+@media (max-width: 768px) {
+  :root { --sidebar-width: 100vw; }
+
+  .app-layout {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Sidebar takes full screen on mobile */
+  .sidebar-wrapper {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    z-index: 10;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+
+  .sidebar-wrapper .sidebar {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Chat window takes full screen on mobile */
+  .chat-wrapper {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    z-index: 10;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+
+  /* Hidden state — slide off screen */
+  .sidebar-wrapper.mobile-hidden {
+    transform: translateX(-100%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .chat-wrapper.mobile-hidden {
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* Show back button on mobile */
+  .mobile-back-btn {
+    display: flex !important;
+    font-size: 20px;
+    color: var(--accent) !important;
+  }
+
+  /* Wider bubbles on mobile */
+  .message-wrap { max-width: 85%; }
+
+  /* Full-width modal on mobile */
+  .modal {
+    max-width: 100%;
+    margin: 0 12px;
+    border-radius: var(--radius-md);
+  }
+
+  /* Admin panel full screen on mobile */
+  .admin-panel {
+    max-height: 100vh;
+    border-radius: 0;
+  }
+}
+
 /* ─── LOGIN PAGE ────────────────────────────────────────────── */
 .login-page {
   min-height: 100vh;

@@ -8,7 +8,7 @@ import { formatDateSeparator } from "../Sidebar/ChatListItem";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 
-export default function ChatWindow() {
+export default function ChatWindow({ onBack }) {
   const { user } = useAuth();
   const { activeChat, messages, loadingMessages, sendMessage, emitTyping, emitStopTyping, typingUsers } = useChat();
   const [text, setText] = useState("");
@@ -109,7 +109,7 @@ export default function ChatWindow() {
 
   return (
     <div className="chat-window" style={{ position: "relative" }}>
-      <ChatHeader />
+      <ChatHeader onBack={onBack} />
 
       <div className="messages-area" id="messages-area">
         {loadingMessages && (
