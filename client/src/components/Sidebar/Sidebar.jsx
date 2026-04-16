@@ -139,30 +139,63 @@ export default function Sidebar({ onChatSelect, activeChatId }) {
           </button>
         </div>
 
-        {/* ── 🔔 Notification Permission Banner ───────────────── */}
-        {notifPermission !== "granted" && notifPermission !== "denied" && notifPermission !== "unsupported" && (
+        {/* ── 🔔 Notification Banner — always visible ──────────── */}
+        {notifPermission !== "unsupported" && (
           <div
-            onClick={handleEnableNotifs}
+            onClick={notifPermission !== "granted" ? handleEnableNotifs : undefined}
             style={{
               padding: "10px 16px",
-              background: "rgba(255,180,0,0.08)",
-              borderBottom: "1px solid rgba(255,180,0,0.15)",
+              background: notifPermission === "granted"
+                ? "rgba(0,230,118,0.07)"
+                : notifPermission === "denied"
+                ? "rgba(239,68,68,0.08)"
+                : "rgba(255,180,0,0.08)",
+              borderBottom: `1px solid ${
+                notifPermission === "granted"
+                  ? "rgba(0,230,118,0.15)"
+                  : notifPermission === "denied"
+                  ? "rgba(239,68,68,0.15)"
+                  : "rgba(255,180,0,0.15)"
+              }`,
               display: "flex",
               alignItems: "center",
               gap: 10,
-              cursor: "pointer",
+              cursor: notifPermission !== "granted" ? "pointer" : "default",
               flexShrink: 0,
               userSelect: "none",
             }}
           >
-            <span style={{ fontSize: 22 }}>🔔</span>
+            <span style={{ fontSize: 20 }}>
+              {notifPermission === "granted" ? "✅" : notifPermission === "denied" ? "🚫" : "🔔"}
+            </span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#ffb400" }}>Enable Notifications</div>
+              <div style={{
+                fontSize: 13, fontWeight: 600,
+                color: notifPermission === "granted" ? "var(--accent)"
+                  : notifPermission === "denied" ? "#ef4444" : "#ffb400"
+              }}>
+                {notifPermission === "granted"
+                  ? "Notifications Enabled"
+                  : notifPermission === "denied"
+                  ? "Notifications Blocked"
+                  : "Enable Notifications"}
+              </div>
               <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-                Tap to get message alerts like WhatsApp
+                {notifPermission === "granted"
+                  ? "You'll receive alerts like WhatsApp"
+                  : notifPermission === "denied"
+                  ? "Allow in browser Settings → Site Settings"
+                  : "Tap to get message alerts like WhatsApp"}
               </div>
             </div>
-            <span style={{ fontSize: 11, color: "#ffb400", fontWeight: 700, flexShrink: 0 }}>Enable →</span>
+            {notifPermission !== "granted" && (
+              <span style={{
+                fontSize: 11, fontWeight: 700, flexShrink: 0,
+                color: notifPermission === "denied" ? "#ef4444" : "#ffb400"
+              }}>
+                {notifPermission === "denied" ? "Fix →" : "Enable →"}
+              </span>
+            )}
           </div>
         )}
 

@@ -49,6 +49,19 @@ const markAsRead = async (req, res) => {
   res.json({ message: "Marked as read" });
 };
 
+// @route GET /api/messages/unread-counts
+// Returns { chatId: unreadCount } for the current user
+const getUnreadCounts = async (req, res) => {
+  const userId = req.user._id;
+  const counts = await Message.aggregate([
+    { $match: { sender: { $ne: userId }, readBy: { $ne: userId } } },
+    { $group: { _id: "$chat", count: { $sum: 1 } } },
+  ]);
+  const result = {};
+  counts.forEach(({ _id, count }) => { result[_id.toString()] = count; });
+  res.json(result);
+};
+
 // @route POST /api/messages/upload
 const uploadFile = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
@@ -63,4 +76,4 @@ const uploadFile = async (req, res) => {
   }
 };
 
-module.exports = { sendMessage, getMessages, markAsRead, uploadFile };
+module.exports = { sendMessage, getMessages, markAsRead, uploadFile, getUnreadCounts };

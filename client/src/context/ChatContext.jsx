@@ -67,12 +67,16 @@ export const ChatProvider = ({ children }) => {
 
   useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
 
-  // ── Fetch chats (memoized) ───────────────────────────────
+  // ── Fetch chats + unread counts from server ────────────
   const fetchChats = useCallback(async () => {
     setLoadingChats(true);
     try {
-      const { data } = await api.get("/chats");
-      setChats(data);
+      const [{ data: chatData }, { data: counts }] = await Promise.all([
+        api.get("/chats"),
+        api.get("/messages/unread-counts"),
+      ]);
+      setChats(chatData);
+      setUnreadCounts(counts); // ← load from DB on every startup
     } catch {
       toast.error("Failed to load chats");
     } finally {
