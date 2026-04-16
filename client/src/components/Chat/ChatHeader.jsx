@@ -21,7 +21,7 @@ export default function ChatHeader({ onInfoClick, onBack }) {
   const name = getChatName(activeChat, user._id);
   const avatar = getChatAvatar(activeChat, user._id);
   const otherUser = getOtherUser(activeChat, user._id);
-  const isOnline = !activeChat.isGroupChat && otherUser && onlineUsers.has(otherUser._id);
+  const isOnline = !activeChat.isGroupChat && otherUser && onlineUsers.has(otherUser._id?.toString());
   const isTyping = typingUsers[activeChat._id];
   const memberCount = activeChat.users?.length;
 

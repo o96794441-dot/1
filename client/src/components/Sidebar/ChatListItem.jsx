@@ -41,7 +41,7 @@ export default function ChatListItem({ chat, isActive, onClick }) {
   const name = getChatName(chat, user._id);
   const avatar = getChatAvatar(chat, user._id);
   const otherUser = getOtherUser(chat, user._id);
-  const isOnline = !chat.isGroupChat && otherUser && onlineUsers.has(otherUser._id);
+  const isOnline = !chat.isGroupChat && otherUser && onlineUsers.has(otherUser._id?.toString());
   const isTyping = typingUsers[chat._id];
   const latest = chat.latestMessage;
   const unread = isActive ? 0 : (unreadCounts?.[chat._id] || 0);
