@@ -67,6 +67,24 @@ export const ChatProvider = ({ children }) => {
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [token]);
 
+  // ── Update tab title + App Badge with total unread count ──
+  // Works on ALL platforms: Android, iOS, Windows, desktop
+  useEffect(() => {
+    const total = Object.values(unreadCounts).reduce((sum, n) => sum + n, 0);
+
+    // 1️⃣ Document title — works on ALL browsers/devices
+    document.title = total > 0 ? `(${total}) ChatApp` : "ChatApp";
+
+    // 2️⃣ App Badge API — works on Android PWA + Windows Chrome/Edge
+    if ("setAppBadge" in navigator) {
+      if (total > 0) {
+        navigator.setAppBadge(total).catch(() => {});
+      } else {
+        navigator.clearAppBadge().catch(() => {});
+      }
+    }
+  }, [unreadCounts]);
+
   // ── Connect socket ───────────────────────────────────────
   useEffect(() => {
     if (!token) return;
