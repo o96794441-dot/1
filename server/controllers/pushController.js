@@ -1,13 +1,22 @@
 const webpush = require("web-push");
 const PushSubscription = require("../models/PushSubscription");
 
-// Configure VAPID
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL,
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+// Configure VAPID — only if all keys are present
+const VAPID_READY =
+  process.env.VAPID_EMAIL &&
+  process.env.VAPID_PUBLIC_KEY &&
+  process.env.VAPID_PRIVATE_KEY;
 
+if (VAPID_READY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL,
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+  console.log("✅ Web Push VAPID configured");
+} else {
+  console.warn("⚠️  VAPID keys not set — push notifications disabled");
+}
 // POST /api/push/subscribe
 const subscribe = async (req, res) => {
   const { subscription } = req.body;
@@ -34,6 +43,7 @@ const unsubscribe = async (req, res) => {
 
 // Send push to specific users (called from messageController)
 const sendPushToUsers = async (userIds, payload) => {
+  if (!VAPID_READY) return; // Skip if VAPID not configured
   const subs = await PushSubscription.find({ user: { $in: userIds } });
   const results = await Promise.allSettled(
     subs.map((s) =>
