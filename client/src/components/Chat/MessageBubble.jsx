@@ -1,7 +1,8 @@
 import { format, parseISO } from "date-fns";
 import { useAuth } from "../../context/AuthContext";
+import { BsCheck2, BsCheck2All, BsFileEarmark } from "react-icons/bs";
 
-export default function MessageBubble({ message, showSenderName = false }) {
+export default function MessageBubble({ message, showSenderName = false, onImageClick }) {
   const { user } = useAuth();
   const isOwn = message.sender?._id === user._id || message.sender === user._id;
   const isRead = message.readBy?.length > 1;
@@ -22,14 +23,15 @@ export default function MessageBubble({ message, showSenderName = false }) {
             className="bubble-image"
             src={message.fileUrl}
             alt="shared"
-            onClick={() => window.open(message.fileUrl, "_blank")}
+            onClick={() => onImageClick?.(message.fileUrl)}
           />
         )}
 
         {/* Document / other file */}
         {message.fileUrl && message.fileType !== "image" && (
           <a className="bubble-file" href={message.fileUrl} target="_blank" rel="noreferrer">
-            📎 {message.fileName || "File"}
+            <BsFileEarmark className="bubble-file-icon" />
+            <span>{message.fileName || "File"}</span>
           </a>
         )}
 
@@ -41,7 +43,7 @@ export default function MessageBubble({ message, showSenderName = false }) {
           <span className="bubble-time">{timeStr}</span>
           {isOwn && (
             <span className={`read-tick ${isRead ? "read" : ""}`}>
-              {isRead ? "✓✓" : "✓"}
+              {isRead ? <BsCheck2All size={16} /> : <BsCheck2 size={16} />}
             </span>
           )}
         </div>

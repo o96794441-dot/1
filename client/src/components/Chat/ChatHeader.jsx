@@ -2,8 +2,10 @@ import { useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
 import { getChatName, getChatAvatar, getOtherUser } from "../Sidebar/ChatListItem";
+import { BsPeopleFill } from "react-icons/bs";
+import { IoChevronBack } from "react-icons/io5";
 
-export default function ChatHeader({ onInfoClick, onBack }) {
+export default function ChatHeader({ onBack }) {
   const { user } = useAuth();
   const { activeChat, onlineUsers, typingUsers } = useChat();
 
@@ -29,7 +31,6 @@ export default function ChatHeader({ onInfoClick, onBack }) {
     if (isTyping) return "typing...";
     if (activeChat.isGroupChat) return `${memberCount} members`;
     if (isOnline) return "online";
-    // Show last seen time for offline users
     if (otherUser?.lastSeen) {
       const d = new Date(otherUser.lastSeen);
       const now = new Date();
@@ -44,22 +45,21 @@ export default function ChatHeader({ onInfoClick, onBack }) {
   };
 
   return (
-    <div className="chat-header" style={{ background: "var(--bg-secondary)", zIndex: 20 }}>
-
-      {/* ← EXIT button — always visible, prominent */}
+    <div className="chat-header">
+      {/* ← Back button */}
       <button
-        className="back-btn-visible"
+        className="back-btn"
         onClick={onBack}
         title="Back to chats"
         aria-label="Back to chats"
       >
-        ‹
+        <IoChevronBack size={22} />
       </button>
 
       {/* Avatar */}
       <div className="avatar-wrap" style={{ flexShrink: 0 }}>
         {activeChat.isGroupChat ? (
-          <div className="avatar-group">👥</div>
+          <div className="avatar-group"><BsPeopleFill size={22} /></div>
         ) : (
           <img
             className="avatar"
@@ -73,15 +73,12 @@ export default function ChatHeader({ onInfoClick, onBack }) {
       </div>
 
       {/* Name + Status */}
-      <div className="chat-header-info" style={{ flex: 1, minWidth: 0 }}>
-        <div className="chat-header-name" style={{ fontSize: 16, fontWeight: 700 }}>{name}</div>
+      <div className="chat-header-info">
+        <div className="chat-header-name">{name}</div>
         <div className={`chat-header-status ${isOnline || isTyping ? "online" : ""}`}>
           {statusText()}
         </div>
       </div>
-
-      {/* Info button */}
-      <button className="icon-btn" title="Info" onClick={onInfoClick}>ℹ️</button>
     </div>
   );
 }

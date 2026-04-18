@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { BsPeopleFill } from "react-icons/bs";
+import { FiX } from "react-icons/fi";
 
 export default function GroupModal({ onClose, onCreated }) {
   const [groupName, setGroupName] = useState("");
@@ -53,8 +55,11 @@ export default function GroupModal({ onClose, onCreated }) {
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h2 className="modal-title">👥 New Group Chat</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <h2 className="modal-title">
+            <BsPeopleFill size={20} style={{ color: "var(--accent)" }} />
+            New Group Chat
+          </h2>
+          <button className="modal-close" onClick={onClose}><FiX size={18} /></button>
         </div>
 
         <div className="form-group">
@@ -77,7 +82,9 @@ export default function GroupModal({ onClose, onCreated }) {
                 <div className="selected-user-chip" key={u._id}>
                   <img src={u.avatar} alt={u.name} />
                   <span>{u.name}</span>
-                  <button className="chip-remove" onClick={() => removeUser(u._id)}>✕</button>
+                  <button className="chip-remove" onClick={() => removeUser(u._id)}>
+                    <FiX size={14} />
+                  </button>
                 </div>
               ))}
             </div>

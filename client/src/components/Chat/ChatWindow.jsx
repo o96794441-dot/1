@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import EmojiPicker from "emoji-picker-react";
 import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
@@ -7,6 +7,10 @@ import MessageBubble from "./MessageBubble";
 import { formatDateSeparator } from "../Sidebar/ChatListItem";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { IoMdChatbubbles } from "react-icons/io";
+import { BsEmojiSmile, BsPaperclip } from "react-icons/bs";
+import { IoSend } from "react-icons/io5";
+import { FiX } from "react-icons/fi";
 
 export default function ChatWindow({ onBack }) {
   const { user } = useAuth();
@@ -15,6 +19,7 @@ export default function ChatWindow({ onBack }) {
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
+  const [lightboxImg, setLightboxImg] = useState(null);
   const bottomRef = useRef(null);
   const typingTimer = useRef(null);
   const fileInputRef = useRef(null);
@@ -99,7 +104,9 @@ export default function ChatWindow({ onBack }) {
     return (
       <div className="chat-window">
         <div className="no-chat-selected">
-          <div className="big-icon">💬</div>
+          <div className="no-chat-icon">
+            <IoMdChatbubbles size={48} />
+          </div>
           <h2>Welcome to ChatApp</h2>
           <p>Select a conversation or search for someone to start chatting</p>
         </div>
@@ -126,6 +133,7 @@ export default function ChatWindow({ onBack }) {
               key={item.data._id || i}
               message={item.data}
               showSenderName={activeChat.isGroupChat}
+              onImageClick={(url) => setLightboxImg(url)}
             />
           )
         )}
@@ -143,12 +151,17 @@ export default function ChatWindow({ onBack }) {
       {/* Upload preview */}
       {uploadFile && (
         <div className="upload-preview">
-          📎 {uploadFile.name}
-          <button
-            style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "var(--accent)", fontSize: 16 }}
-            onClick={() => setUploadFile(null)}
-          >✕</button>
+          <BsPaperclip size={16} />
+          <span>{uploadFile.name}</span>
+          <button className="upload-remove-btn" onClick={() => setUploadFile(null)}>
+            <FiX size={18} />
+          </button>
         </div>
+      )}
+
+      {/* Click-outside overlay for emoji picker */}
+      {showEmoji && (
+        <div className="emoji-overlay" onClick={() => setShowEmoji(false)} />
       )}
 
       {/* Emoji Picker */}
@@ -166,8 +179,12 @@ export default function ChatWindow({ onBack }) {
       {/* Input Bar */}
       <div className="message-input-bar">
         <div className="input-actions">
-          <button className="icon-btn" onClick={() => setShowEmoji((p) => !p)} title="Emoji">😊</button>
-          <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Attach file">📎</button>
+          <button className="icon-btn" onClick={() => setShowEmoji((p) => !p)} title="Emoji">
+            <BsEmojiSmile size={20} />
+          </button>
+          <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Attach file">
+            <BsPaperclip size={20} />
+          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -197,9 +214,16 @@ export default function ChatWindow({ onBack }) {
           disabled={(!text.trim() && !uploadFile) || uploading}
           id="send-message-btn"
         >
-          {uploading ? <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} /> : "➤"}
+          {uploading ? <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} /> : <IoSend size={20} />}
         </button>
       </div>
+
+      {/* Image Lightbox */}
+      {lightboxImg && (
+        <div className="lightbox-overlay" onClick={() => setLightboxImg(null)}>
+          <img className="lightbox-img" src={lightboxImg} alt="Preview" />
+        </div>
+      )}
     </div>
   );
 }

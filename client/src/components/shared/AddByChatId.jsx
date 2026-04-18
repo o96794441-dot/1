@@ -1,6 +1,9 @@
 import { useState } from "react";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { MdFingerprint } from "react-icons/md";
+import { FiX } from "react-icons/fi";
+import { IoChatbubbleEllipses } from "react-icons/io5";
 
 /**
  * AddByChatId — lets a user find someone by their 7-digit Chat ID
@@ -46,23 +49,25 @@ export default function AddByChatId({ onChatOpened, onClose }) {
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 420 }}>
         <div className="modal-header">
-          <h2 className="modal-title">🆔 Add by Chat ID</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <h2 className="modal-title">
+            <MdFingerprint size={22} style={{ color: "var(--accent)" }} />
+            Add by Chat ID
+          </h2>
+          <button className="modal-close" onClick={onClose}><FiX size={18} /></button>
         </div>
 
-        <p style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: 20 }}>
+        <p style={{ color: "var(--text-secondary)", fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>
           Ask the person to share their <strong style={{ color: "var(--accent)" }}>Chat ID</strong> with you,
-          then enter it below to start chatting — just like WhatsApp with phone numbers.
+          then enter it below to start chatting.
         </p>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           <input
             id="chatid-input"
             className="form-input"
-            placeholder="Enter 7-digit Chat ID (e.g. 1234567)"
+            placeholder="Enter 7-digit Chat ID"
             value={chatId}
             onChange={(e) => {
-              // only allow digits
               setChatId(e.target.value.replace(/[^0-9]/g, "").slice(0, 7));
               setFoundUser(null);
             }}
@@ -82,30 +87,12 @@ export default function AddByChatId({ onChatOpened, onClose }) {
 
         {/* Found User Card */}
         {foundUser && (
-          <div style={{
-            background: "var(--bg-input)",
-            border: "1px solid rgba(0,230,118,0.2)",
-            borderRadius: 12,
-            padding: 16,
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            marginBottom: 20,
-            animation: "fadeIn 0.2s ease",
-          }}>
-            <img
-              src={foundUser.avatar}
-              alt={foundUser.name}
-              style={{ width: 52, height: 52, borderRadius: "50%", border: "2px solid var(--accent)" }}
-            />
+          <div className="found-user-card">
+            <img className="found-user-avatar" src={foundUser.avatar} alt={foundUser.name} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{foundUser.name}</div>
-              <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 2 }}>
-                Chat ID: #{foundUser.chatId}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
-                {foundUser.about}
-              </div>
+              <div className="found-user-name">{foundUser.name}</div>
+              <div className="found-user-chatid">Chat ID: #{foundUser.chatId}</div>
+              <div className="found-user-about">{foundUser.about}</div>
             </div>
           </div>
         )}
@@ -119,7 +106,8 @@ export default function AddByChatId({ onChatOpened, onClose }) {
               onClick={handleStartChat}
               disabled={opening}
             >
-              {opening ? "Opening..." : `💬 Chat with ${foundUser.name}`}
+              <IoChatbubbleEllipses size={16} />
+              {opening ? "Opening..." : `Chat with ${foundUser.name}`}
             </button>
           )}
         </div>

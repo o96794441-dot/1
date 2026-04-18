@@ -1,6 +1,7 @@
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
+import { BsPeopleFill } from "react-icons/bs";
 
 export function getChatName(chat, currentUserId) {
   if (chat.isGroupChat) return chat.chatName;
@@ -64,11 +65,12 @@ export default function ChatListItem({ chat, isActive, onClick }) {
     >
       <div className="avatar-wrap">
         {chat.isGroupChat ? (
-          <div className="avatar-group">👥</div>
+          <div className="avatar-group">
+            <BsPeopleFill size={22} />
+          </div>
         ) : (
           <img className="avatar" src={avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`} alt={name} />
         )}
-        {/* 🟢 Online / ⚫ Offline dot for direct chats */}
         {!chat.isGroupChat && (
           <div className={isOnline ? "online-dot" : "offline-dot"} />
         )}
@@ -76,8 +78,8 @@ export default function ChatListItem({ chat, isActive, onClick }) {
 
       <div className="chat-item-body">
         <div className="chat-item-top">
-          <span className={`chat-item-name ${unread > 0 ? "unread-name" : ""}`}>{name}</span>
-          <span className={`chat-item-time ${unread > 0 ? "unread-time" : ""}`}>{time}</span>
+          <span className="chat-item-name">{name}</span>
+          <span className="chat-item-time">{time}</span>
         </div>
         <div className="chat-item-bottom">
           <span
@@ -86,8 +88,6 @@ export default function ChatListItem({ chat, isActive, onClick }) {
           >
             {previewText()}
           </span>
-
-          {/* 🔴 Unread badge — green circle with count like WhatsApp */}
           {unread > 0 && (
             <span className="unread-badge" aria-label={`${unread} unread messages`}>
               {unread > 99 ? "99+" : unread}

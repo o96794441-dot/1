@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import { useState } from "react";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../../context/AuthContext";
+import { IoMdChatbubbles } from "react-icons/io";
+import { BsChatDotsFill, BsPeopleFill, BsImageFill, BsShieldCheck } from "react-icons/bs";
+import { MdOutlineMarkChatRead } from "react-icons/md";
+import { HiStatusOnline } from "react-icons/hi";
 import toast from "react-hot-toast";
-
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 export default function LoginPage() {
   const { loginWithGoogle } = useAuth();
@@ -21,19 +23,38 @@ export default function LoginPage() {
     }
   };
 
-  return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <div className="login-page">
-        <div className="login-card">
-          <div className="login-logo">💬</div>
-          <h1>ChatApp</h1>
-          <p>Real-time messaging, instantly.<br />Connect with anyone, anywhere.</p>
+  const features = [
+    { icon: <BsChatDotsFill />, text: "Real-time messaging" },
+    { icon: <BsPeopleFill />, text: "Group chats" },
+    { icon: <BsImageFill />, text: "File & image sharing" },
+    { icon: <MdOutlineMarkChatRead />, text: "Read receipts" },
+    { icon: <HiStatusOnline />, text: "Online status" },
+    { icon: <BsShieldCheck />, text: "Privacy first" },
+  ];
 
-          {loading ? (
-            <div style={{ display: "flex", justifyContent: "center", padding: "14px" }}>
-              <div className="spinner" style={{ width: 28, height: 28 }} />
-            </div>
-          ) : (
+  return (
+    <div className="login-page">
+      {/* Background orbs */}
+      <div className="login-bg-orb login-bg-orb--green" />
+      <div className="login-bg-orb login-bg-orb--blue" />
+      <div className="login-bg-orb login-bg-orb--purple" />
+
+      <div className="login-card">
+        <div className="login-logo">
+          <IoMdChatbubbles size={36} />
+        </div>
+        <h1>ChatApp</h1>
+        <p>
+          Real-time messaging, instantly.<br />
+          Connect with anyone, anywhere.
+        </p>
+
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "16px" }}>
+            <div className="spinner" style={{ width: 28, height: 28 }} />
+          </div>
+        ) : (
+          <div className="google-btn-wrap">
             <GoogleLogin
               onSuccess={handleSuccess}
               onError={() => toast.error("Google login failed")}
@@ -44,22 +65,18 @@ export default function LoginPage() {
               text="continue_with"
               width="340"
             />
-          )}
-
-          <div className="features-list">
-            {[
-              "Real-time messaging", "Group chats",
-              "File & image sharing", "Typing indicators",
-              "Read receipts", "Online status",
-            ].map((f) => (
-              <div className="feature-item" key={f}>
-                <div className="feature-dot" />
-                {f}
-              </div>
-            ))}
           </div>
+        )}
+
+        <div className="features-grid">
+          {features.map((f) => (
+            <div className="feature-card" key={f.text}>
+              {f.icon}
+              <span>{f.text}</span>
+            </div>
+          ))}
         </div>
       </div>
-    </GoogleOAuthProvider>
+    </div>
   );
 }
