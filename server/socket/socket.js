@@ -68,6 +68,30 @@ const setupSocket = (io) => {
       socket.to(chatId).emit("message-read", { chatId, readerId });
     });
 
+    // ═══════════════════════════════════════════════════════════
+    // 😍 Reaction — broadcast to chat room
+    // ═══════════════════════════════════════════════════════════
+    socket.on("message-reaction", (data) => {
+      // data: { chatId, messageId, reactions (full array) }
+      socket.to(data.chatId).emit("message-reaction", data);
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // 🗑️ Message deleted for everyone — broadcast to chat room
+    // ═══════════════════════════════════════════════════════════
+    socket.on("message-deleted", (data) => {
+      // data: { chatId, messageId, deletedForEveryone }
+      socket.to(data.chatId).emit("message-deleted", data);
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // ↗️ Message forwarded — broadcast to target chat room
+    // ═══════════════════════════════════════════════════════════
+    socket.on("message-forwarded", (message) => {
+      const chatId = message.chat._id || message.chat;
+      socket.to(chatId).emit("message-received", message);
+    });
+
     // Disconnect
     socket.on("disconnect", async () => {
       onlineUsers.delete(userId);

@@ -2,10 +2,10 @@ import { useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
 import { getChatName, getChatAvatar, getOtherUser } from "../Sidebar/ChatListItem";
-import { BsPeopleFill } from "react-icons/bs";
+import { BsPeopleFill, BsSearch } from "react-icons/bs";
 import { IoChevronBack } from "react-icons/io5";
 
-export default function ChatHeader({ onBack }) {
+export default function ChatHeader({ onBack, onSearchOpen }) {
   const { user } = useAuth();
   const { activeChat, onlineUsers, typingUsers } = useChat();
 
@@ -79,6 +79,15 @@ export default function ChatHeader({ onBack }) {
           {statusText()}
         </div>
       </div>
+
+      {/* 🔍 Search button */}
+      <button
+        className="icon-btn chat-header-search"
+        onClick={onSearchOpen}
+        title="Search in conversation"
+      >
+        <BsSearch size={17} />
+      </button>
     </div>
   );
 }

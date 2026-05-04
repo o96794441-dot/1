@@ -50,7 +50,18 @@ export default function ChatListItem({ chat, isActive, onClick }) {
   const previewText = () => {
     if (isTyping) return "typing...";
     if (!latest) return "No messages yet";
-    if (latest.fileUrl) return latest.fileType === "image" ? "📷 Photo" : "📎 File";
+    if (latest.deletedForEveryone) return "🚫 This message was deleted";
+    if (latest.isVoiceNote) return "🎙️ Voice message";
+    if (latest.fileUrl) {
+      if (latest.fileType === "image") return "📷 Photo";
+      if (latest.fileType === "video") return "🎬 Video";
+      if (latest.fileType === "audio") return "🔊 Audio";
+      return "📎 File";
+    }
+    if (latest.isForwarded) {
+      const prefix = latest.sender?._id === user._id ? "You: " : "";
+      return prefix + "↗️ " + (latest.content || "Forwarded");
+    }
     const prefix = latest.sender?._id === user._id ? "You: " : "";
     return prefix + (latest.content || "");
   };

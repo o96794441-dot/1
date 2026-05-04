@@ -1,25 +1,42 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import EmojiPicker from "emoji-picker-react";
 import { useAuth } from "../../context/AuthContext";
 import { useChat } from "../../context/ChatContext";
 import ChatHeader from "./ChatHeader";
 import MessageBubble from "./MessageBubble";
+import VoiceRecorder from "./VoiceRecorder";
+import MessageSearch from "./MessageSearch";
+import FilePreviewModal from "../shared/FilePreviewModal";
+import ForwardModal from "../shared/ForwardModal";
 import { formatDateSeparator } from "../Sidebar/ChatListItem";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 import { IoMdChatbubbles } from "react-icons/io";
-import { BsEmojiSmile, BsPaperclip } from "react-icons/bs";
+import { BsEmojiSmile, BsPaperclip, BsMicFill } from "react-icons/bs";
 import { IoSend } from "react-icons/io5";
 import { FiX } from "react-icons/fi";
 
+// ── URL detection regex ──────────────────────────────────────
+const URL_REGEX = /https?:\/\/[^\s]+/;
+
 export default function ChatWindow({ onBack }) {
   const { user } = useAuth();
-  const { activeChat, messages, loadingMessages, sendMessage, emitTyping, emitStopTyping, typingUsers } = useChat();
+  const {
+    activeChat, messages, loadingMessages, sendMessage,
+    emitTyping, emitStopTyping, typingUsers,
+    replyingTo, setReplyingTo,
+    forwardingMessage, setForwardingMessage,
+  } = useChat();
+
   const [text, setText] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadFile, setUploadFile] = useState(null);
   const [lightboxImg, setLightboxImg] = useState(null);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null); // File preview modal
+  const [showSearch, setShowSearch] = useState(false);
+  const [highlightMsgId, setHighlightMsgId] = useState(null);
+
   const bottomRef = useRef(null);
   const typingTimer = useRef(null);
   const fileInputRef = useRef(null);
@@ -30,31 +47,26 @@ export default function ChatWindow({ onBack }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, activeChat]);
 
+  // ── Send text message (with optional link preview) ─────────
   const handleSend = async () => {
-    if ((!text.trim() && !uploadFile) || !activeChat) return;
+    if ((!text.trim()) || !activeChat) return;
     emitStopTyping(activeChat._id);
 
-    if (uploadFile) {
-      setUploading(true);
-      try {
-        const formData = new FormData();
-        formData.append("file", uploadFile);
-        const { data } = await api.post("/messages/upload", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        await sendMessage(text.trim(), data.url, data.fileType === "image" ? "image" : "document", uploadFile.name);
-        setUploadFile(null);
-        setText("");
-      } catch {
-        toast.error("Upload failed");
-      } finally {
-        setUploading(false);
-      }
-    } else {
-      await sendMessage(text.trim());
-      setText("");
-    }
+    const messageText = text.trim();
+    setText("");
     textareaRef.current?.focus();
+
+    // Check for URL and fetch link preview
+    const urlMatch = messageText.match(URL_REGEX);
+    let linkPreview = null;
+    if (urlMatch) {
+      try {
+        const { data } = await api.post("/messages/link-preview", { url: urlMatch[0] });
+        if (data.title || data.image) linkPreview = data;
+      } catch { /* silent fail */ }
+    }
+
+    await sendMessage(messageText, "", "", "", linkPreview ? { linkPreview } : {});
   };
 
   const handleKeyDown = (e) => {
@@ -78,13 +90,72 @@ export default function ChatWindow({ onBack }) {
     textareaRef.current?.focus();
   };
 
+  // ── File selection → open preview modal ────────────────────
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { toast.error("File must be under 10MB"); return; }
-    setUploadFile(file);
+    if (file.size > 25 * 1024 * 1024) { toast.error("File must be under 25MB"); return; }
+    setPreviewFile(file);
     e.target.value = "";
   };
+
+  // ── Send file from preview modal ──────────────────────────
+  const handleFileSend = async (file, caption) => {
+    if (!activeChat) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data } = await api.post("/messages/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      let fileType = data.fileType;
+      if (file.type?.startsWith("image/")) fileType = "image";
+      else if (file.type?.startsWith("video/")) fileType = "video";
+      else if (file.type?.startsWith("audio/")) fileType = "audio";
+
+      await sendMessage(caption || "", data.url, fileType, file.name);
+    } catch {
+      toast.error("Upload failed");
+    } finally {
+      setUploading(false);
+      setPreviewFile(null);
+    }
+  };
+
+  // ── Send voice message ────────────────────────────────────
+  const handleVoiceSend = async (audioBlob, duration) => {
+    if (!activeChat) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", audioBlob, "voice-message.webm");
+      const { data } = await api.post("/messages/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      await sendMessage("", data.url, "audio", "Voice message", {
+        isVoiceNote: true,
+        audioDuration: duration,
+      });
+    } catch {
+      toast.error("Voice message failed");
+    } finally {
+      setUploading(false);
+      setShowVoiceRecorder(false);
+    }
+  };
+
+  // ── Jump to message (for search) ──────────────────────────
+  const handleJumpToMessage = useCallback((msgId) => {
+    setHighlightMsgId(msgId);
+    const el = document.getElementById(`msg-${msgId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => setHighlightMsgId(null), 2000);
+    }
+  }, []);
 
   // Group messages by date for separators
   const messageGroups = [];
@@ -99,6 +170,7 @@ export default function ChatWindow({ onBack }) {
   });
 
   const isTyping = activeChat && typingUsers[activeChat._id];
+  const hasText = text.trim().length > 0;
 
   if (!activeChat) {
     return (
@@ -116,7 +188,16 @@ export default function ChatWindow({ onBack }) {
 
   return (
     <div className="chat-window" style={{ position: "relative" }}>
-      <ChatHeader onBack={onBack} />
+      <ChatHeader onBack={onBack} onSearchOpen={() => setShowSearch(true)} />
+
+      {/* 🔍 Message Search Bar */}
+      {showSearch && (
+        <MessageSearch
+          chatId={activeChat._id}
+          onClose={() => setShowSearch(false)}
+          onJumpToMessage={handleJumpToMessage}
+        />
+      )}
 
       <div className="messages-area" id="messages-area">
         {loadingMessages && (
@@ -134,6 +215,7 @@ export default function ChatWindow({ onBack }) {
               message={item.data}
               showSenderName={activeChat.isGroupChat}
               onImageClick={(url) => setLightboxImg(url)}
+              highlightId={highlightMsgId}
             />
           )
         )}
@@ -148,14 +230,28 @@ export default function ChatWindow({ onBack }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Upload preview */}
-      {uploadFile && (
-        <div className="upload-preview">
-          <BsPaperclip size={16} />
-          <span>{uploadFile.name}</span>
-          <button className="upload-remove-btn" onClick={() => setUploadFile(null)}>
+      {/* ↩️ Reply Bar */}
+      {replyingTo && (
+        <div className="reply-bar">
+          <div className="reply-bar-content">
+            <div className="reply-bar-name">{replyingTo.sender?.name || "User"}</div>
+            <div className="reply-bar-text">
+              {replyingTo.isVoiceNote ? "🎙️ Voice message" :
+               replyingTo.fileUrl ? (replyingTo.fileType === "image" ? "📷 Photo" : "📎 File") :
+               replyingTo.content?.slice(0, 80) || ""}
+            </div>
+          </div>
+          <button className="reply-bar-close" onClick={() => setReplyingTo(null)}>
             <FiX size={18} />
           </button>
+        </div>
+      )}
+
+      {/* Upload progress indicator */}
+      {uploading && (
+        <div className="upload-preview">
+          <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
+          <span>Uploading...</span>
         </div>
       )}
 
@@ -176,47 +272,82 @@ export default function ChatWindow({ onBack }) {
         </div>
       )}
 
-      {/* Input Bar */}
-      <div className="message-input-bar">
-        <div className="input-actions">
-          <button className="icon-btn" onClick={() => setShowEmoji((p) => !p)} title="Emoji">
-            <BsEmojiSmile size={20} />
-          </button>
-          <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Attach file">
-            <BsPaperclip size={20} />
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,application/pdf,.doc,.docx,.zip"
-            style={{ display: "none" }}
-            onChange={handleFileChange}
-            id="file-upload-input"
-          />
-        </div>
+      {/* Input Bar / Voice Recorder */}
+      {showVoiceRecorder ? (
+        <VoiceRecorder
+          onSend={handleVoiceSend}
+          onCancel={() => setShowVoiceRecorder(false)}
+        />
+      ) : (
+        <div className="message-input-bar">
+          <div className="input-actions">
+            <button className="icon-btn" onClick={() => setShowEmoji((p) => !p)} title="Emoji">
+              <BsEmojiSmile size={20} />
+            </button>
+            <button className="icon-btn" onClick={() => fileInputRef.current?.click()} title="Attach file">
+              <BsPaperclip size={20} />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.zip,.rar,.txt,.xls,.xlsx,.ppt,.pptx"
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+              id="file-upload-input"
+            />
+          </div>
 
-        <div className="message-input-wrap">
-          <textarea
-            ref={textareaRef}
-            className="message-textarea"
-            placeholder="Type a message..."
-            value={text}
-            onChange={handleTyping}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            id="message-input"
-          />
-        </div>
+          <div className="message-input-wrap">
+            <textarea
+              ref={textareaRef}
+              className="message-textarea"
+              placeholder="Type a message..."
+              value={text}
+              onChange={handleTyping}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              id="message-input"
+            />
+          </div>
 
-        <button
-          className="send-btn"
-          onClick={handleSend}
-          disabled={(!text.trim() && !uploadFile) || uploading}
-          id="send-message-btn"
-        >
-          {uploading ? <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} /> : <IoSend size={20} />}
-        </button>
-      </div>
+          {hasText ? (
+            <button
+              className="send-btn"
+              onClick={handleSend}
+              disabled={uploading}
+              id="send-message-btn"
+            >
+              <IoSend size={20} />
+            </button>
+          ) : (
+            <button
+              className="send-btn mic-btn"
+              onClick={() => setShowVoiceRecorder(true)}
+              title="Voice message"
+              id="voice-message-btn"
+            >
+              <BsMicFill size={20} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 🖼️ File Preview Modal */}
+      {previewFile && (
+        <FilePreviewModal
+          file={previewFile}
+          onSend={handleFileSend}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
+
+      {/* ↗️ Forward Modal */}
+      {forwardingMessage && (
+        <ForwardModal
+          message={forwardingMessage}
+          onClose={() => setForwardingMessage(null)}
+        />
+      )}
 
       {/* Image Lightbox */}
       {lightboxImg && (
